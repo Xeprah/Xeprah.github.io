@@ -135,6 +135,11 @@ body.entered .kanji{opacity:1}
 .setup{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s ease}
 .setup.open{grid-template-rows:1fr}
 .setup-in{overflow:hidden}
+.tabs{display:flex;gap:4px;padding-top:12px}
+.tabs button{flex:1;padding:7px 0;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2);color:#8f8888;font:500 .72rem Outfit,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:color .2s,background .2s,border-color .2s}
+.tabs button:hover{color:#e8e4e4}
+.tabs button[aria-selected="true"]{color:#f5f3f3;background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}
+.setup-grid.swap div{transition:none;opacity:0;transform:translateY(6px)}
 .setup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-top:12px;text-align:left}
 .setup-grid div{padding:9px 11px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.05);min-width:0;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
 .setup.open .setup-grid div{opacity:1;transform:none}
@@ -222,7 +227,7 @@ body.muted .slide input::-moz-range-thumb{opacity:0}
       <!-- add more links: copy an <a> above and swap the href + icon -->
       <button class="setup-btn" id="setupBtn" aria-expanded="false" aria-controls="setup" title="my setup"><svg viewBox="0 0 24 24"><path d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zM5 8h2v2H5V8zm0 3h2v2H5v-2zm11 5H8v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg></button>
     </nav>
-    <section class="setup" id="setup" aria-label="my setup"><div class="setup-in"><div class="setup-grid" id="setupGrid"></div></div></section>
+    <section class="setup" id="setup" aria-label="my setup"><div class="setup-in"><div class="tabs" id="setupTabs" role="tablist"></div><div class="setup-grid" id="setupGrid"></div></div></section>
     </div>
   </div>
 </main>
@@ -254,25 +259,35 @@ const CONFIG = {
   fallbackStatus: "There are things time cannot return.", // shown when you're not doing anything
   timezone: "Australia/Adelaide",
   songName: "$UICIDEBOY$ — Monochromatic", // the background song, e.g. "song name — artist" (shown next to the volume button)
-  // your setup, shown when someone clicks the keyboard button. leave a value "" to hide that row
-  setup: [
-    ["mouse", "Logitech G203"],
-    ["keyboard", "Yunzii YZ75 Pro"],
-    ["headset", "RIG 800 Pro"],
-    ["monitor", "1080p · 170hz"],
-    ["cpu", "Ryzen 7 5700X"],
-    ["gpu", "Radeon RX 9060 XT"],
-    ["ram", "16GB"],
-    ["dpi", "1600 · 1000hz"],
-    ["r6 sens", "21 / 21"],
-    ["r6 fov", "90"],
-    ["ads 1x · 1.5x", "43 · 50"],
-    ["ads 2x · 2.5x", "50 · 50"],
-    ["ads 3x · 4x", "50 · 60"],
-    ["ads 5x · 12x", "71 · 71"],
-    ["r6 res", "1920×1080 · 3.2"],
-    ["raw input", "on"],
-  ],
+  // your setup, shown when someone clicks the keyboard button. each tab is a list of [label, value]
+  setup: {
+    gear: [
+      ["mouse", "Logitech G203"],
+      ["keyboard", "Yunzii YZ75 Pro"],
+      ["headset", "RIG 800 Pro"],
+      ["monitor", "1080p · 170hz"],
+      ["cpu", "Ryzen 7 5700X"],
+      ["gpu", "Radeon RX 9060 XT"],
+      ["ram", "16GB"],
+      ["dpi", "1600 · 1000hz"],
+    ],
+    siege: [
+      ["sens", "21 / 21"],
+      ["fov", "90"],
+      ["ads 1x · 1.5x", "43 · 50"],
+      ["ads 2x · 2.5x", "50 · 50"],
+      ["ads 3x · 4x", "50 · 60"],
+      ["ads 5x · 12x", "71 · 71"],
+      ["res", "1920×1080 · 3.2"],
+      ["raw input", "on"],
+    ],
+    rust: [
+      ["sens", "1.03"],
+      ["ads sens", "0.69"],
+      ["fov", "90"],
+      ["toggle ads", "off"],
+    ],
+  },
   counterUrl: "https://xeprah-views.ignitetweaks-0ba.workers.dev", // your own Cloudflare view counter
 };
 /* ================================= */
@@ -295,10 +310,20 @@ $("mute").onclick = () => { if (audio.muted || audio.volume === 0){ audio.muted 
 // setup panel
 (() => {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const rows = CONFIG.setup.filter(([, v]) => v);
-  if (!rows.length){ $("setupBtn").remove(); $("setup").remove(); return; }
-  $("setupGrid").innerHTML = rows.map(([k, v], i) =>
-    `<div style="transition-delay:${.05 + i*.04}s"><small>${esc(k)}</small><b title="${esc(v)}">${esc(v)}</b></div>`).join("");
+  const tabs = Object.entries(CONFIG.setup).map(([name, rows]) => [name, rows.filter(([, v]) => v)]).filter(([, r]) => r.length);
+  if (!tabs.length){ $("setupBtn").remove(); $("setup").remove(); return; }
+  const grid = $("setupGrid");
+  const show = name => {
+    const rows = tabs.find(t => t[0] === name)[1];
+    [...$("setupTabs").children].forEach(b => b.setAttribute("aria-selected", b.dataset.t === name));
+    grid.classList.add("swap");
+    grid.innerHTML = rows.map(([k, v], i) =>
+      `<div style="transition-delay:${.04 + i*.035}s"><small>${esc(k)}</small><b title="${esc(v)}">${esc(v)}</b></div>`).join("");
+    void grid.offsetWidth; grid.classList.remove("swap");
+  };
+  $("setupTabs").innerHTML = tabs.map(([n]) => `<button role="tab" data-t="${esc(n)}">${esc(n)}</button>`).join("");
+  $("setupTabs").onclick = e => { const b = e.target.closest("button"); if (b) show(b.dataset.t); };
+  show(tabs[0][0]);
   $("setupBtn").onclick = () => {
     const open = $("setup").classList.toggle("open");
     $("setupBtn").setAttribute("aria-expanded", open);
