@@ -127,8 +127,24 @@ body.entered .kanji{opacity:1}
 .links a:hover{transform:translateY(-2px);color:#fff;background:rgba(255,255,255,.07)}
 .links svg{width:24px;height:24px;fill:currentColor}
 
+/* setup panel, slides open inside the card */
+.links a,.setup-btn{width:46px;height:46px;display:grid;place-items:center;border-radius:14px;color:#cfc9c9;transition:transform .25s,color .25s,background .25s}
+.setup-btn{background:none;border:0;cursor:pointer}
+.setup-btn svg{width:24px;height:24px;fill:currentColor}
+.setup-btn:hover,.setup-btn[aria-expanded="true"]{color:#fff;background:rgba(255,255,255,.07)}
+.setup{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s ease}
+.setup.open{grid-template-rows:1fr}
+.setup-in{overflow:hidden}
+.setup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-top:12px;text-align:left}
+.setup-grid div{padding:9px 11px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.05);min-width:0;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+.setup.open .setup-grid div{opacity:1;transform:none}
+.setup-grid small{display:block;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:#6d6767}
+.setup-grid b{display:block;margin-top:2px;font-size:.85rem;font-weight:500;color:#e8e4e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:400px){.setup-grid{grid-template-columns:1fr}}
+
 /* view counter, bottom-right */
 .views{position:fixed;bottom:16px;right:20px;z-index:45;display:flex;gap:6px;align-items:center;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:#5e5858}
+.views .sep{opacity:.5}
 .views svg{width:13px;height:13px;fill:currentColor}
 
 /* spotify progress */
@@ -204,14 +220,16 @@ body.muted .slide input::-moz-range-thumb{opacity:0}
       <a href="https://steamcommunity.com/profiles/76561199468048510/" target="_blank" aria-label="Steam"><svg viewBox="0 0 24 24"><path d="M12 0a12 12 0 0 0-11.96 11.04l6.43 2.66a3.4 3.4 0 0 1 2.13-.6l2.86-4.15v-.06a4.52 4.52 0 1 1 4.52 4.52h-.1l-4.08 2.91v.16a3.39 3.39 0 0 1-6.72.67L.4 15.33A12 12 0 1 0 12 0zM7.54 18.21l-1.47-.61a2.54 2.54 0 1 0 1.4-3.46l1.52.63a1.87 1.87 0 1 1-1.45 3.44zm11.42-9.3a3.02 3.02 0 1 0-6.04 0 3.02 3.02 0 0 0 6.04 0zm-5.28 0a2.27 2.27 0 1 1 4.54 0 2.27 2.27 0 0 1-4.54 0z"/></svg></a>
       <a href="https://r6.tracker.network/r6siege/profile/ubi/Xeprah./overview" target="_blank" aria-label="Rainbow Six Siege stats" title="R6 stats"><svg viewBox="0 0 24 24"><path d="M12 1.5 3 5v6.5c0 5.2 3.8 9.6 9 11 5.2-1.4 9-5.8 9-11V5l-9-3.5zm0 2.15 7 2.72v5.13c0 4.1-2.9 7.7-7 8.9-4.1-1.2-7-4.8-7-8.9V6.37l7-2.72z"/><text x="12" y="15.2" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="800" font-size="7.6" letter-spacing="-.3" fill="currentColor">R6</text></svg></a>
       <!-- add more links: copy an <a> above and swap the href + icon -->
+      <button class="setup-btn" id="setupBtn" aria-expanded="false" aria-controls="setup" title="my setup"><svg viewBox="0 0 24 24"><path d="M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zM5 8h2v2H5V8zm0 3h2v2H5v-2zm11 5H8v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg></button>
     </nav>
+    <section class="setup" id="setup" aria-label="my setup"><div class="setup-in"><div class="setup-grid" id="setupGrid"></div></div></section>
     </div>
   </div>
 </main>
 <div class="kanji">地獄</div>
 <div class="corner l">adelaide, au</div>
 <button class="paw" id="paw" aria-label="paw"><svg viewBox="0 0 24 24"><ellipse cx="6" cy="9.5" rx="2.2" ry="2.9"/><ellipse cx="10" cy="5.5" rx="2.2" ry="3"/><ellipse cx="14.5" cy="5.5" rx="2.2" ry="3"/><ellipse cx="18.5" cy="9.5" rx="2.2" ry="2.9"/><path d="M12.2 11c-3 0-6.2 4.4-6.2 6.9 0 2 1.6 2.6 3 2.6 1.3 0 2.1-.6 3.2-.6s1.9.6 3.2.6c1.4 0 3-.6 3-2.6 0-2.5-3.2-6.9-6.2-6.9z"/></svg></button>
-<div class="views" id="viewsBox" title="profile views" hidden><svg viewBox="0 0 24 24"><path d="M12 5C6.5 5 2.2 8.6 1 12c1.2 3.4 5.5 7 11 7s9.8-3.6 11-7c-1.2-3.4-5.5-7-11-7zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg><span id="views">—</span></div>
+<div class="views" id="viewsBox" title="profile views" hidden><svg viewBox="0 0 24 24"><path d="M12 5C6.5 5 2.2 8.6 1 12c1.2 3.4 5.5 7 11 7s9.8-3.6 11-7c-1.2-3.4-5.5-7-11-7zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-7a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg><span id="views">—</span><span class="sep">·</span><span id="today">0</span>&nbsp;today</div>
 
 <div class="toast" id="toast">copied .xeprah</div>
 <audio id="audio" loop src="https://r2.guns.lol/b8a0a043-d2cd-47a5-8f0c-06e40ac518f0.mp3"></audio>
@@ -236,6 +254,29 @@ const CONFIG = {
   fallbackStatus: "There are things time cannot return.", // shown when you're not doing anything
   timezone: "Australia/Adelaide",
   songName: "$UICIDEBOY$ — Monochromatic", // the background song, e.g. "song name — artist" (shown next to the volume button)
+  // your setup, shown when someone clicks the keyboard button. leave a value "" to hide that row
+  setup: [
+    ["mouse", "Logitech G203"],
+    ["keyboard", "Yunzii 75"],
+    ["headset", "RIG 800 Pro"],
+    ["monitor", "1080p · 170hz"],
+    ["cpu", "Ryzen 7 5700X"],
+    ["gpu", "Radeon RX 9060 XT"],
+    ["ram", "16GB"],
+    ["dpi", "1600 · 1000hz"],
+    ["r6 sens", "22 / 22"],
+    ["r6 ads", "1x 44 · 2.5x 51"],
+    ["r6 res", "1920×1080 · 3.2"],
+    ["raw input", "on"],
+  ],
+    ["keyboard", ""],
+    ["headset", ""],
+    ["monitor", ""],
+    ["mousepad", ""],
+    ["pc", ""],
+    ["r6 sens", ""],
+    ["dpi", ""],
+  ],
   counterUrl: "https://xeprah-views.ignitetweaks-0ba.workers.dev", // your own Cloudflare view counter
 };
 /* ================================= */
@@ -255,16 +296,31 @@ const syncVol = () => {
 $("volume").oninput = e => { audio.volume = +e.target.value; audio.muted = false; syncVol(); };
 $("mute").onclick = () => { if (audio.muted || audio.volume === 0){ audio.muted = false; if (!audio.volume) audio.volume = .35; } else audio.muted = true; syncVol(); };
 
+// setup panel
+(() => {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rows = CONFIG.setup.filter(([, v]) => v);
+  if (!rows.length){ $("setupBtn").remove(); $("setup").remove(); return; }
+  $("setupGrid").innerHTML = rows.map(([k, v], i) =>
+    `<div style="transition-delay:${.05 + i*.04}s"><small>${esc(k)}</small><b title="${esc(v)}">${esc(v)}</b></div>`).join("");
+  $("setupBtn").onclick = () => {
+    const open = $("setup").classList.toggle("open");
+    $("setupBtn").setAttribute("aria-expanded", open);
+  };
+})();
+
 // now-playing title next to the volume button
 if (CONFIG.songName) $("npText").textContent = "♪ " + CONFIG.songName; else $("np").remove();
 
 // view counter: counts each browser once, everyone else just reads the number
 (async () => {
   try {
-    let seen = false; try { seen = localStorage.getItem("seen") === "1"; } catch {}
-    const r = await fetch(`${CONFIG.counterUrl}/${seen ? "get" : "hit"}`);
+    const day = new Date().toLocaleDateString("en-CA", { timeZone: CONFIG.timezone });
+    let seen = false, seenDay = ""; try { seen = localStorage.getItem("seen") === "1"; seenDay = localStorage.getItem("seenDay") || ""; } catch {}
+    const r = await fetch(`${CONFIG.counterUrl}/visit?first=${seen ? 0 : 1}&today=${seenDay === day ? 0 : 1}`);
     const j = await r.json();
-    if (typeof j.value === "number"){ $("viewsBox").hidden = false; $("views").textContent = j.value.toLocaleString("en-AU"); try { localStorage.setItem("seen","1"); } catch {} }
+    if (typeof j.value === "number"){ $("viewsBox").hidden = false; $("views").textContent = j.value.toLocaleString("en-AU"); $("today").textContent = (j.today || 1).toLocaleString("en-AU");
+      try { localStorage.setItem("seen","1"); localStorage.setItem("seenDay", day); } catch {} }
   } catch {}
 })();
 
