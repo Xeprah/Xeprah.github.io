@@ -126,13 +126,19 @@ body.entered .kanji{opacity:1}
 .yt:hover{background:rgba(0,0,0,.4);border-color:rgba(var(--yc),.45);box-shadow:0 0 28px -8px rgba(var(--yc),.55)}
 @keyframes ytin{from{opacity:0;transform:translateY(6px)}}
 .yt .thumb{position:relative;width:96px;aspect-ratio:16/9;flex:none;border-radius:9px;overflow:hidden;background:#111}
-.yt .thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .45s}
+.yt .thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .45s,opacity .3s}
+.yt .txt{transition:opacity .3s}
+.yt.fade .thumb img,.yt.fade .txt{opacity:0}
+.ydots{margin-left:auto;display:flex;gap:4px}
+@media (max-width:560px){.yword{display:none}}
+.ydots i{width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.18);transition:width .3s,background .3s}
+.ydots i.on{width:12px;background:rgba(var(--yc),.9)}
 .yt:hover .thumb img{transform:scale(1.07)}
 .yt .play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35);opacity:0;transition:opacity .25s}
 .yt:hover .play{opacity:1}
 .yt .play svg{width:22px;height:22px;fill:#fff}
 .yt .txt{min-width:0;flex:1}
-.ylabel{display:flex;align-items:center;gap:7px;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:#7d7676}
+.ylabel{display:flex;align-items:center;gap:7px;white-space:nowrap;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:#7d7676}
 .ytag{padding:1px 6px;border-radius:5px;letter-spacing:.08em;font-weight:600;color:#f3dfe2;background:rgba(var(--yc),.35);transition:background .4s}
 .ytag:empty{display:none}
 .ytitle{margin-top:3px;font-size:.95rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -240,7 +246,7 @@ body.muted .slide input::-moz-range-thumb{opacity:0}
     <a class="yt" id="yt" target="_blank" rel="noopener" hidden>
       <div class="thumb"><img id="ytThumb" alt=""><span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></div>
       <div class="txt">
-        <div class="ylabel">latest upload<span class="ytag" id="ytTag"></span></div>
+        <div class="ylabel">latest<span class="yword">upload</span><span class="ytag" id="ytTag"></span><span class="ydots" id="ytDots"></span></div>
         <div class="ytitle" id="ytTitle"></div>
         <div class="ymeta" id="ytMeta"></div>
       </div>
@@ -314,7 +320,7 @@ const CONFIG = {
     ],
   },
   counterUrl: "https://xeprah-views.ignitetweaks-0ba.workers.dev", // your own Cloudflare view counter
-  videoMaxDays: 30, // the "latest upload" box hides itself if your newest video is older than this
+  videoMaxDays: 180, // a game's video is left out of the "latest upload" box once it's older than this many days
 };
 /* ================================= */
 const $ = id => document.getElementById(id);
@@ -405,30 +411,57 @@ async function typeLoop(){
   }
 }
 
-// latest youtube upload (the cloudflare worker reads your channel feed for us)
+// latest youtube uploads (the cloudflare worker reads your channel feed for us):
+// rotates between your newest R6 video and your newest Rust video, newest first
 (async () => {
   try {
-    const v = await (await fetch(`${CONFIG.counterUrl}/latest`)).json();
-    if (!v.id) return;
-    const days = (Date.now() - Date.parse(v.published)) / 864e5;
-    if (!(days <= CONFIG.videoMaxDays)) return;
-    const when = days < 1/24 ? "just now" : days < 1 ? `${Math.floor(days*24)}h ago` : days < 2 ? "yesterday" : `${Math.floor(days)} days ago`;
-    $("yt").href = `https://www.youtube.com/watch?v=${v.id}`;
-    $("ytTitle").textContent = $("ytTitle").title = v.title;
-    $("ytTag").textContent = /\b(r6|siege)\b/i.test(v.title) ? "R6" : /\brust\b/i.test(v.title) ? "Rust" : "";
-    $("ytMeta").textContent = `${when} · ${v.views.toLocaleString("en-AU")} view${v.views === 1 ? "" : "s"}`;
-    // tint the hover glow + tag with the thumbnail's strongest colour
-    const img = $("ytThumb"); img.crossOrigin = "anonymous";
-    img.onload = () => { try {
-      const cv = document.createElement("canvas"); cv.width = 32; cv.height = 18;
-      const x = cv.getContext("2d"); x.drawImage(img, 0, 0, 32, 18);
-      const px = x.getImageData(0, 0, 32, 18).data; let s = [0,0,0], n = 0;
-      for (let i = 0; i < px.length; i += 4){ const [r,g,b] = [px[i],px[i+1],px[i+2]];
-        if (Math.max(r,g,b) - Math.min(r,g,b) > 50 && Math.max(r,g,b) > 70){ s[0]+=r; s[1]+=g; s[2]+=b; n++; } }
-      if (n > 15) $("yt").style.setProperty("--yc", s.map(c => Math.round(c/n)).join(","));
-    } catch {} };
-    img.src = `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`;
-    $("yt").hidden = false;
+    const v = await (await fetch(`${CONFIG.counterUrl}/latest?v=2`)).json(); // bump v if the reply format changes, so browsers skip old cached copies
+    const age = x => (Date.now() - Date.parse(x.published)) / 864e5;
+    const vids = (v.games ? [v.games.r6, v.games.rust] : [v])
+      .filter(x => x?.id && age(x) <= CONFIG.videoMaxDays)
+      .sort((a, b) => age(a) - age(b));
+    if (!vids.length) return;
+
+    const box = $("yt"), thumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+    const ago = d => d < 1/24 ? "just now" : d < 1 ? `${Math.floor(d*24)}h ago` : d < 2 ? "yesterday"
+      : d < 60 ? `${Math.floor(d)} days ago` : `${Math.floor(d/30)} months ago`;
+    let cur = 0, hovering = false;
+    const show = i => {
+      const x = vids[cur = i];
+      box.href = `https://www.youtube.com/watch?v=${x.id}`;
+      $("ytThumb").src = thumb(x.id);
+      $("ytTitle").textContent = $("ytTitle").title = x.title;
+      $("ytTag").textContent = /\b(r6|siege)\b/i.test(x.title) ? "R6" : /\brust\b/i.test(x.title) ? "Rust" : "";
+      $("ytMeta").textContent = `${ago(age(x))} · ${x.views.toLocaleString("en-AU")} view${x.views === 1 ? "" : "s"}`;
+      box.style.setProperty("--yc", x.tint || "138,28,43");
+      [...$("ytDots").children].forEach((d, k) => d.classList.toggle("on", k === i));
+    };
+
+    // preload every thumbnail and grab its strongest colour for the hover glow, tag and dots
+    $("ytThumb").crossOrigin = "anonymous";
+    vids.forEach(x => {
+      const img = new Image(); img.crossOrigin = "anonymous";
+      img.onload = () => { try {
+        const cv = document.createElement("canvas"); cv.width = 32; cv.height = 18;
+        const c = cv.getContext("2d"); c.drawImage(img, 0, 0, 32, 18);
+        const px = c.getImageData(0, 0, 32, 18).data; let s = [0,0,0], n = 0;
+        for (let i = 0; i < px.length; i += 4){ const [r,g,b] = [px[i],px[i+1],px[i+2]];
+          if (Math.max(r,g,b) - Math.min(r,g,b) > 50 && Math.max(r,g,b) > 70){ s[0]+=r; s[1]+=g; s[2]+=b; n++; } }
+        if (n > 15){ x.tint = s.map(q => Math.round(q/n)).join(","); if (x === vids[cur]) box.style.setProperty("--yc", x.tint); }
+      } catch {} };
+      img.src = thumb(x.id);
+    });
+
+    $("ytDots").innerHTML = vids.length > 1 ? vids.map(() => "<i></i>").join("") : "";
+    show(0); box.hidden = false;
+    if (vids.length < 2) return;
+    // swap every 6s with a quick fade; holds still while you're hovering it or the tab is hidden
+    box.onmouseenter = () => hovering = true; box.onmouseleave = () => hovering = false;
+    setInterval(() => {
+      if (hovering || document.hidden) return;
+      box.classList.add("fade");
+      setTimeout(() => { show((cur + 1) % vids.length); box.classList.remove("fade"); }, 320);
+    }, 6000);
   } catch {}
 })();
 
